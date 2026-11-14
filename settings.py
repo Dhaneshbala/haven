@@ -11,7 +11,7 @@ SCALE = 4
 WIN_W, WIN_H = VW * SCALE, VH * SCALE
 FPS = 60
 
-# match (DONT TOUCH THE NUMBERS - balanced by hand, trust me)
+# match
 MATCH_TIME = 60.0
 HURRY_AT = 10.0              # when the HURRY banner shows
 
@@ -96,12 +96,12 @@ CPU_COOLDOWN = 0.55          # shoots slower than a human
 
 # mid-match banners
 MSG_TIMES = (15.0, 30.0, 45.0)
-MSGS = ("KEEP FIRING!!", "DONT CHOKE NOW!", "BOUNCE BACK!")
+MSGS = ("KEEP FIRING!", "STAY SHARP!", "BOUNCE BACK!")
 RESULT_MSGS = (
-    "GG!! RUN IT BACK!",
-    "REMATCH. RIGHT NOW.",
-    "THAT WAS CLOSE LOL",
-    "ONE MORE. TRUST ME!",
+    "GREAT MATCH - EVERY SHOT COUNTS!",
+    "NOTHING BEATS A REMATCH!",
+    "PERSISTENCE WINS MATCHES!",
+    "BOUNCE BACK AND GO AGAIN!",
 )
 
 # palette

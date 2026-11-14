@@ -27,9 +27,6 @@ def _lerp_color(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-# TODO: add powerups someday (rapid fire, triple shot, a shield...)
-
-
 class Match:
     def __init__(self, assets, sfx, mode="versus"):
         self.assets = assets
