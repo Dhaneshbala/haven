@@ -6,18 +6,25 @@ import random
 import pygame
 
 from settings import (
-    HUD_H, MATCH_TIME, HURRY_AT, BANK_LADDER, MSGS, MSG_TIMES,
-    PLAY_TOP, PLAY_BOTTOM,
+    HUD_H, MATCH_TIME, HURRY_AT, ARENA_L, ARENA_R, BANK_LADDER, BULGE_TIME,
+    MSGS, MSG_TIMES, PLAY_TOP, PLAY_BOTTOM,
     P1_X, P2_X, P1_COLORS, P2_COLORS, TARGET_ZONE, VW,
-    RUBBER_DARK, RUBBER_MID, RUBBER_LIGHT,
+    RUBBER_DARK, RUBBER_MID, RUBBER_LIGHT, TRAMPOLINE_COMPRESS,
+    TRAMPOLINE_YS, TRAMP_LIGHT, TRAMP_MID,
     TARGET_DARK, TARGET_LIGHT,
     UI_DARK, UI_MID, UI_LINE, WHITE, GRAY, GOLD, RED,
+    WALL_CHARGE_BULLET, WALL_CHARGE_CORE, WALL_CHARGE_TRAMP,
     target_size, target_speed, tier_for_size,
 )
 from pixel_font import draw_text, text_width
 from entities import (
     Bullet, Particle, Player, Ripple, ScorePop, Target, point_seg_dist,
 )
+
+
+def _lerp_color(a, b, t):
+    """Blend two rgb colors: t=0 returns a, t=1 returns b."""
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
 class Match:
@@ -29,11 +36,15 @@ class Match:
         mid_y = (PLAY_TOP + PLAY_BOTTOM) / 2
         self.p1 = Player("p1", P1_X, mid_y, assets)
         self.p2 = Player("p2", P2_X, mid_y, assets, is_cpu=(mode == "solo"))
-        self.target = Target(self.zone, target_size, target_speed, sfx, assets["targets"])
+        self.target = Target(self.zone, target_size, target_speed, sfx,
+                             assets["targets"], self._core_bounce)
         self.bullets = []
         self.particles = []
         self.pops = []
         self.ripples = []
+        self.wall_charge = 0.0      # bounce meter; full = WALLS ARE LIVE!
+        self.walls_live = False
+        self.bulges = []            # (side, y, age) living-wall bulges
         self.timer = MATCH_TIME
         self.elapsed = 0.0
         self.msg_idx = 0
@@ -74,6 +85,21 @@ class Match:
                 x, y, random.uniform(-34, 34), random.uniform(-34, 34),
                 random.uniform(0.15, 0.35), (color, UI_MID), 1))
 
+    def _core_bounce(self, kind):
+        """Target calls this on every zone wall and trampoline bounce."""
+        self._charge_walls(WALL_CHARGE_CORE if kind == "zone"
+                           else WALL_CHARGE_TRAMP)
+
+    def _charge_walls(self, amount):
+        """Feed the wall meter; when it fills, the next bank shot pays extra."""
+        if self.walls_live:
+            return
+        self.wall_charge = min(1.0, self.wall_charge + amount)
+        if self.wall_charge >= 1.0:
+            self.walls_live = True
+            self.show_banner("WALLS ARE LIVE!", GOLD)
+            self.sfx.play("start")
+
     # update
     def update(self, dt, held):
         if self.over:
@@ -106,6 +132,9 @@ class Match:
                 self.ripples.append(
                     Ripple(bullet.x, bullet.y, (colors["light"], colors["shade"])))
                 self.sfx.play("boing")
+                side = "L" if bullet.x < VW / 2 else "R"
+                self.bulges.append((side, bullet.y, 0.0))
+                self._charge_walls(WALL_CHARGE_BULLET)
             elif event == "fizzle":
                 self.wall_puff(bullet.x, bullet.y, GRAY)
         self._collisions()
@@ -115,6 +144,8 @@ class Match:
         self.particles = [p for p in self.particles if p.update(dt)]
         self.pops = [p for p in self.pops if p.update(dt)]
         self.ripples = [r for r in self.ripples if r.update(dt)]
+        self.bulges = [(side, y, age + dt) for side, y, age in self.bulges
+                       if age < BULGE_TIME]
         self.banner_t = max(0.0, self.banner_t - dt)
         self.shake = max(0.0, self.shake - dt * 9.0)
 
@@ -156,7 +187,14 @@ class Match:
     def _hit_points(self, bullet, base_points):
         """Bank ladder x back-wall return bonus, plus a flat rebound bonus."""
         bounces = min(bullet.bounces, len(BANK_LADDER) - 1)
-        points = base_points * bullet.multiplier()
+        if self.walls_live and bounces >= 1:
+            points = base_points * bullet.multiplier(1)   # one ladder step up
+            self.walls_live = False
+            self.wall_charge = 0.0
+            self.pops.append(ScorePop(bullet.x, bullet.y - 27, "WALLS LIVE!",
+                                      GOLD))
+        else:
+            points = base_points * bullet.multiplier()
         if bounces >= 1:
             labels = {1: "BANK SHOT!", 2: "BOUNCE BACK!", 3: "TRIPLE BANK!"}
             self.pops.append(ScorePop(bullet.x, bullet.y - 13, labels[bounces],
@@ -192,16 +230,18 @@ class Match:
             if (int(t * 3.0) + i) % 9 == 0:
                 surf.fill((196, 206, 240), (x, y, 1, 1))
         self._draw_zone(surf, sdx)
+        self._draw_trampolines(surf, sdx, sdy)
         self.target.draw(surf, t, sdx, sdy)
         for bullet in self.bullets:
-            bullet.draw(surf, self.assets["bullets"][bullet.owner], sdx, sdy)
+            bullet.draw(surf, self.assets["bullets"][bullet.owner], sdx, sdy,
+                        self.walls_live)
         self.p1.draw(surf, t, sdx, sdy)
         self.p2.draw(surf, t, sdx, sdy)
         for particle in self.particles:
             particle.draw(surf, sdx, sdy)
         for pop in self.pops:
             pop.draw(surf, sdx, sdy)
-        self._draw_walls(surf)
+        self._draw_walls(surf, t)
         for ripple in self.ripples:
             ripple.draw(surf, sdx, sdy)
         self._draw_banner(surf)
@@ -214,23 +254,59 @@ class Match:
             surf.fill((52, 60, 104), (zone.left + dx, y, 1, 2))
             surf.fill((52, 60, 104), (zone.right - 1 + dx, y, 1, 2))
 
-    def _draw_walls(self, surf):
-        # rubber walls, stitching and corner pads
-        pygame.draw.rect(surf, RUBBER_MID, (0, HUD_H, VW, 2))
+    def _draw_walls(self, surf, t):
+        # rubber walls, stitching, corner pads. they glow gold as the wall
+        # meter charges up, and pulse when WALLS ARE LIVE
+        if self.walls_live:
+            charge = 1.0 if int(t * 8) % 2 == 0 else 0.7    # live = pulsing
+        else:
+            charge = self.wall_charge
+        wall = _lerp_color(RUBBER_MID, GOLD, charge * 0.85)
+        stitch = _lerp_color(RUBBER_LIGHT, WHITE, charge * 0.7)
+        pygame.draw.rect(surf, wall, (0, HUD_H, VW, 2))
         pygame.draw.rect(surf, RUBBER_DARK, (0, HUD_H + 2, VW, 1))
-        pygame.draw.rect(surf, RUBBER_MID, (0, PLAY_BOTTOM + 1, VW, 2))
-        pygame.draw.rect(surf, RUBBER_MID, (0, HUD_H, 2, 153))
-        pygame.draw.rect(surf, RUBBER_MID, (VW - 2, HUD_H, 2, 153))
+        pygame.draw.rect(surf, wall, (0, PLAY_BOTTOM + 1, VW, 2))
+        pygame.draw.rect(surf, wall, (0, HUD_H, 2, 153))
+        pygame.draw.rect(surf, wall, (VW - 2, HUD_H, 2, 153))
         for y in range(HUD_H + 3, PLAY_BOTTOM + 1, 5):     # stitching
-            surf.fill(RUBBER_LIGHT, (1, y, 1, 1))
-            surf.fill(RUBBER_LIGHT, (VW - 2, y, 1, 1))
+            surf.fill(stitch, (1, y, 1, 1))
+            surf.fill(stitch, (VW - 2, y, 1, 1))
         for x in range(4, VW - 4, 5):
-            surf.fill(RUBBER_LIGHT, (x, HUD_H + 1, 1, 1))
-            surf.fill(RUBBER_LIGHT, (x, PLAY_BOTTOM + 1, 1, 1))
+            surf.fill(stitch, (x, HUD_H + 1, 1, 1))
+            surf.fill(stitch, (x, PLAY_BOTTOM + 1, 1, 1))
+        self._draw_bulges(surf)
         self._bumper_pad(surf, 2, HUD_H + 2)
         self._bumper_pad(surf, VW - 6, HUD_H + 2)
         self._bumper_pad(surf, 2, PLAY_BOTTOM - 2)
         self._bumper_pad(surf, VW - 6, PLAY_BOTTOM - 2)
+
+    def _draw_bulges(self, surf):
+        # living walls: rubber bumps where bullets smack in, springing back
+        for side, y, age in self.bulges:
+            amp = math.sin(min(1.0, age / BULGE_TIME) * math.pi)
+            depth = max(1, int(round(amp * 5.0)))
+            if side == "L":
+                rect = (ARENA_L, int(y) - 2, depth, 5)
+                tip = (ARENA_L + depth - 1, int(y), 1, 1)
+            else:
+                rect = (ARENA_R - depth, int(y) - 2, depth, 5)
+                tip = (ARENA_R - depth, int(y), 1, 1)
+            pygame.draw.rect(surf, RUBBER_LIGHT, rect)
+            surf.fill(WHITE, tip)
+
+    def _draw_trampolines(self, surf, dx=0, dy=0):
+        # springy bands across the target zone; they squash when the core
+        # launches off them
+        zone = self.zone
+        for i, band_y in enumerate(TRAMPOLINE_YS):
+            y = int(band_y) + dy
+            comp = min(1.0, self.target.compress[i] / TRAMPOLINE_COMPRESS)
+            thick = 1 if comp > 0.35 else 2
+            color = _lerp_color(TRAMP_MID, WHITE, comp)
+            pygame.draw.rect(surf, color, (zone.left + dx, y, zone.width,
+                                           thick))
+            for x in range(zone.left + 3, zone.right - 3, 6):   # coil ticks
+                surf.fill(TRAMP_LIGHT, (x + dx, y + thick, 1, 1))
 
     def _bumper_pad(self, surf, x, y):
         pygame.draw.rect(surf, RUBBER_DARK, (x, y, 4, 4))

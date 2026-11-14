@@ -12,7 +12,8 @@ from settings import (
     GUN_LEN, MUZZLE_DIST, GOLD, PLAY_BOTTOM, PLAY_TOP, PLAYER_SPEED,
     POP_LIFE, REBOUND_WINDOW, RETURN_MULT, RIPPLE_TTL, SHOT_COOLDOWN,
     TARGET_DARK, BULLET_CAP, UI_LINE, UI_MID, TARGET_BODY, TARGET_LIGHT,
-    TARGET_CORE, tier_for_size, P1_COLORS, P2_COLORS,
+    TARGET_CORE, TRAMPOLINE_COMPRESS, TRAMPOLINE_YS, tier_for_size,
+    P1_COLORS, P2_COLORS,
 )
 from pixel_font import draw_text
 
@@ -189,14 +190,14 @@ class Bullet:
             self.alive = False
         return "wall"
 
-    def multiplier(self):
-        """Points multiplier this shot is carrying right now."""
-        mult = BANK_LADDER[min(self.bounces, len(BANK_LADDER) - 1)]
+    def multiplier(self, step=0):
+        """Points multiplier this shot carries right now (+1 ladder step)."""
+        mult = BANK_LADDER[min(self.bounces + step, len(BANK_LADDER) - 1)]
         if self.backed:
             mult *= RETURN_MULT
         return mult
 
-    def draw(self, surf, bundle, dx=0, dy=0):
+    def draw(self, surf, bundle, dx=0, dy=0, live=False):
         tier = min(self.bounces, 2)          # 0 normal, 1 hot, 2+ super
         if tier and self.trail:
             ramp = bundle["ramp"]
@@ -211,7 +212,8 @@ class Bullet:
             frames = bundle["super"]
         frame = frames[int(self.anim * 22) % 2]
         surf.blit(frame, (int(self.x) - 2 + dx, int(self.y) - 1 + dy))
-        mult = self.multiplier()
+        step = 1 if (live and self.bounces >= 1) else 0
+        mult = self.multiplier(step)
         if mult > 1:                 # live bank value over the bullet
             draw_text(surf, f"X{mult}", (int(self.x) + dx, int(self.y) - 7 + dy),
                       GOLD, 1, "center")
@@ -220,7 +222,8 @@ class Bullet:
 class Target:
     """The bouncing core both players shoot at."""
 
-    def __init__(self, zone, size_fn, speed_fn, sfx=None, target_frames=None):
+    def __init__(self, zone, size_fn, speed_fn, sfx=None, target_frames=None,
+                 on_bounce=None):
         self.zone = zone
         self.size_fn = size_fn
         self.speed_fn = speed_fn
@@ -236,6 +239,8 @@ class Target:
         self.flash = 0.0
         self.boost = 0.0
         self.rebound = 0.0     # time left in the "just bounced off a wall" window
+        self.on_bounce = on_bounce   # match callback: "zone" / "tramp"
+        self.compress = [0.0, 0.0]   # trampoline squash timers
         self.impulse_t = random.uniform(2.5, 5.5)
 
     def radius(self):
@@ -251,6 +256,7 @@ class Target:
         self.boost = max(0.0, self.boost - dt)
         self.flash = max(0.0, self.flash - dt)
         self.rebound = max(0.0, self.rebound - dt)
+        self.compress = [max(0.0, c - dt) for c in self.compress]
         speed = self.base_speed * (1.0 + 0.6 * self.boost)
         current = math.hypot(self.vx, self.vy)
         if current < 1e-6:
@@ -286,6 +292,18 @@ class Target:
             self.rebound = REBOUND_WINDOW
             if self.sfx:
                 self.sfx.play("bounce")
+            if self.on_bounce:
+                self.on_bounce("zone")
+        # trampolines! the core bounces off these and gets a speed boost
+        for i, band_y in enumerate(TRAMPOLINE_YS):
+            if self.vy > 0.0 and self.y < band_y <= self.y + radius:
+                self.y = band_y - radius
+                self.vy = -abs(self.vy)
+                self._tramp_hit(i)
+            elif self.vy < 0.0 and self.y > band_y >= self.y - radius:
+                self.y = band_y + radius
+                self.vy = abs(self.vy)
+                self._tramp_hit(i)
         self.impulse_t -= dt
         if self.impulse_t <= 0.0:
             self.impulse_t = random.uniform(2.5, 5.5)
@@ -301,6 +319,15 @@ class Target:
         self.flash = 0.09
         self.boost = 1.0
         return points, label, color
+
+    def _tramp_hit(self, i):
+        """Launch off trampoline band i; the caller already flipped vy."""
+        self.boost = 1.0
+        self.compress[i] = TRAMPOLINE_COMPRESS
+        if self.sfx:
+            self.sfx.play("boing")
+        if self.on_bounce:
+            self.on_bounce("tramp")
 
     def draw(self, surf, t, dx=0, dy=0):
         size = int(round(self.size))

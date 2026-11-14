@@ -53,6 +53,23 @@ RETURN_MULT = 2              # back-wall round trip bonus
 # hit's base points again, on top of everything else
 REBOUND_WINDOW = 0.3
 
+# trampoline bands inside the target zone: the core bounces off them with a
+# speed kick; bullets fly straight over them
+TRAMPOLINE_YS = (58, 140)
+TRAMPOLINE_COMPRESS = 0.3    # seconds a band stays squashed after a launch
+TRAMP_MID = (58, 130, 92)
+TRAMP_LIGHT = (150, 232, 180)
+
+# walls charge up: every bounce feeds the meter. When it fills, the walls
+# flash gold (WALLS ARE LIVE!) and the next banked shot pays one ladder step
+# higher, then the meter drains and starts refilling
+WALL_CHARGE_BULLET = 0.08
+WALL_CHARGE_CORE = 0.05
+WALL_CHARGE_TRAMP = 0.12
+
+# living walls: rubber bulges where bullets smack the side walls
+BULGE_TIME = 0.35
+
 # target
 TARGET_SIZE_START = 16.0     # diameter
 TARGET_SIZE_END = 6.0
