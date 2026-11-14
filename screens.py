@@ -117,6 +117,14 @@ def draw_results(surf, match, t, buttons, mouse, confetti, message):
     draw_text(surf, f"{match.p2.score:02d} {right_label}", (170, 68), P2_COLORS["light"], 2, "left")
 
     draw_text(surf, message, (VW // 2, 92), GOLD, 1, "center")
+    if match.new_best:
+        draw_text(surf, "NEW BEST!!", (VW // 2, 100), GOLD, 1, "center")
+    elif match.best > 0:
+        draw_text(surf, f"BEST {match.best}", (VW // 2, 100), GRAY, 1, "center")
+    if match.longest_bank >= 1:
+        color = GOLD if match.new_bank_record else GRAY
+        draw_text(surf, f"LONGEST BANK {match.longest_bank}",
+                  (VW // 2, 107), color, 1, "center")
     for button in buttons:
         button.draw(surf, mouse)
     draw_text(surf, "ENTER PLAY AGAIN - M MENU", (VW // 2, 154), GRAY, 1, "center")

@@ -49,6 +49,12 @@ BULLET_CAP = 32
 BANK_LADDER = (1, 2, 3, 5)   # points multiplier for 0/1/2/3 wall bounces
 RETURN_MULT = 2              # back-wall round trip bonus
 
+# slow-mo jackpots: any hit worth HITSTOP_MIN_MULT or more freezes the match
+# for a beat - the world runs at HITSTOP_SCALE speed while the flash fades
+HITSTOP_MIN_MULT = 5
+HITSTOP_TIME = 0.25
+HITSTOP_SCALE = 0.25
+
 # rebound: hitting the core right after it bounced off a zone wall pays the
 # hit's base points again, on top of everything else
 REBOUND_WINDOW = 0.3

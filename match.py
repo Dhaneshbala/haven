@@ -7,8 +7,9 @@ import pygame
 
 from settings import (
     HUD_H, MATCH_TIME, HURRY_AT, ARENA_L, ARENA_R, BANK_LADDER, BULGE_TIME,
+    HITSTOP_MIN_MULT, HITSTOP_SCALE, HITSTOP_TIME,
     MSGS, MSG_TIMES, PLAY_TOP, PLAY_BOTTOM,
-    P1_X, P2_X, P1_COLORS, P2_COLORS, TARGET_ZONE, VW,
+    P1_X, P2_X, P1_COLORS, P2_COLORS, TARGET_ZONE, VW, VH,
     RUBBER_DARK, RUBBER_MID, RUBBER_LIGHT, TRAMPOLINE_COMPRESS,
     TRAMPOLINE_YS, TRAMP_LIGHT, TRAMP_MID,
     TARGET_DARK, TARGET_LIGHT,
@@ -20,6 +21,7 @@ from pixel_font import draw_text, text_width
 from entities import (
     Bullet, Particle, Player, Ripple, ScorePop, Target, point_seg_dist,
 )
+from records import best_score, save_bank, save_score
 
 
 def _lerp_color(a, b, t):
@@ -45,6 +47,12 @@ class Match:
         self.wall_charge = 0.0      # bounce meter; full = WALLS ARE LIVE!
         self.walls_live = False
         self.bulges = []            # (side, y, age) living-wall bulges
+        self.hitstop = 0.0          # slow-mo timer while a jackpot lands
+        self.longest_bank = 0       # biggest single-bullet bank chain
+        self.best = best_score(mode)    # score to beat this match
+        self.best_popped = False
+        self.new_best = False       # record flags, filled in at _finish
+        self.new_bank_record = False
         self.timer = MATCH_TIME
         self.elapsed = 0.0
         self.msg_idx = 0
@@ -104,6 +112,9 @@ class Match:
     def update(self, dt, held):
         if self.over:
             return
+        if self.hitstop > 0.0:          # slow-mo while the jackpot lands
+            self.hitstop = max(0.0, self.hitstop - dt)
+            dt *= HITSTOP_SCALE
         self.elapsed += dt
         self.timer = max(0.0, self.timer - dt)
 
@@ -170,6 +181,12 @@ class Match:
                 points = self._hit_points(bullet, base_points)
                 scorer = self.p1 if bullet.owner == "p1" else self.p2
                 scorer.score += points
+                if (not self.best_popped and self.best > 0
+                        and scorer.score > self.best):
+                    self.best_popped = True
+                    self.show_banner("NEW BEST!!", GOLD, 2.0)
+                    self.pops.append(ScorePop(bullet.x, bullet.y - 34,
+                                              "NEW BEST!!", GOLD))
                 self.pops.append(ScorePop(bullet.x, bullet.y - 6, f"+{points}",
                                           scorer.colors["light"]))
                 self.explosion(bullet.x, bullet.y,
@@ -188,23 +205,28 @@ class Match:
         """Bank ladder x back-wall return bonus, plus a flat rebound bonus."""
         bounces = min(bullet.bounces, len(BANK_LADDER) - 1)
         if self.walls_live and bounces >= 1:
-            points = base_points * bullet.multiplier(1)   # one ladder step up
+            mult = bullet.multiplier(1)   # one ladder step up
+            points = base_points * mult
             self.walls_live = False
             self.wall_charge = 0.0
             self.pops.append(ScorePop(bullet.x, bullet.y - 27, "WALLS LIVE!",
                                       GOLD))
         else:
-            points = base_points * bullet.multiplier()
+            mult = bullet.multiplier()
+            points = base_points * mult
         if bounces >= 1:
             labels = {1: "BANK SHOT!", 2: "BOUNCE BACK!", 3: "TRIPLE BANK!"}
             self.pops.append(ScorePop(bullet.x, bullet.y - 13, labels[bounces],
                                       GOLD))
+            self.longest_bank = max(self.longest_bank, bullet.bounces)
             if bounces >= 2:
                 self.sfx.play("start")       # little flourish on the jackpots
         if self.target.rebound > 0.0:
             points += base_points            # core just bounced off a zone wall
             self.pops.append(ScorePop(bullet.x, bullet.y - 20, "REBOUND!",
                                       TARGET_LIGHT))
+        if mult >= HITSTOP_MIN_MULT:
+            self.hitstop = HITSTOP_TIME      # jackpots stop time for a beat
         return points
 
     def _finish(self):
@@ -217,6 +239,10 @@ class Match:
             self.winner = 2
         else:
             self.winner = 0
+        score = (self.p1.score if self.mode == "solo"
+                 else max(self.p1.score, self.p2.score))
+        self.new_best = save_score(self.mode, score)
+        self.new_bank_record = save_bank(self.longest_bank)
         self.sfx.play("win")
 
     # draw
@@ -247,6 +273,11 @@ class Match:
         self._draw_banner(surf)
         self._draw_hud(surf, t)
         surf.blit(self.assets["scanlines"], (0, 0))
+        if self.hitstop > 0.0:          # white flash while the jackpot lands
+            alpha = int(150 * (self.hitstop / HITSTOP_TIME))
+            flash = pygame.Surface((VW, VH), pygame.SRCALPHA)
+            flash.fill((255, 255, 255, alpha))
+            surf.blit(flash, (0, 0))
 
     def _draw_zone(self, surf, dx):
         zone = self.zone

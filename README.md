@@ -40,6 +40,17 @@ charges a hidden wall meter; when it fills, the walls flash gold (WALLS
 ARE LIVE!) and the next banked shot pays one multiplier step higher, so
 a x6 BOUNCE BACK! becomes x10.
 
+Big hits get a moment to land: any shot worth x5 or more (a TRIPLE BANK,
+the x6 BOUNCE BACK, or a x10 walls-live jackpot) freezes the match for a
+quarter second with a white flash, then time speeds back up.
+
+The game also keeps records in a small `best.json` next to the game: the
+best single-player score per mode (in versus, the better of the two
+players counts) and the longest single-bullet bank chain ever. Cross
+your best mid-match and the game shouts NEW BEST!!; the results screen
+always shows the score to beat and the longest bank of the match, in
+gold when either one just set a new record.
+
 ## Winning
 
 When the timer reaches zero, the player with the highest score wins. A `>` or
