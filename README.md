@@ -1,110 +1,83 @@
-# Haven Sydney Project
+# BOUNCE BACK
 
-## BOUNCE BACK
+a 2 player arcade shooter for pygame-ce. me and my mate made it.
 
-**BOUNCE BACK** is a two-player retro arcade shooter made with pygame-ce.
-You share an arena, chase one bouncing energy core, and have 60 seconds to
-score as many points as possible.
+both players share one screen and shoot at a little core that bounces
+around the middle. it gets smaller and faster as the 60 second match goes
+on, and it flings itself away whenever it gets hit.
 
-## How it works
+small target = more points. large 1, medium 3, small 5, tiny 10.
 
-The energy core is always moving. It ricochets around the arena, becoming
-smaller and faster as the match goes on. Every time someone hits it, it gets
-knocked back with a satisfying bounce.
+## the whole game is about bouncing
 
-The smaller the core, the more it is worth:
+- **bank shots** - if your shot bounces off a wall before it hits the core
+  it pays way more. every wall bounce raises the multiplier: one bounce = x2
+  (BANK SHOT!), three bounces = x5 (TRIPLE BANK!)
+- **BOUNCE BACK** - the title shot. if your bullet goes all the way off your
+  own back wall and comes back out again, it pays x6. hardest shot in the
+  game, feels amazing
+- **hot bullets** - banked bullets heat up and drag a little trail, and the
+  game shows their multiplier over them while they fly (X2, X6, X5...)
+- **rebound** - hit the core right after it bounces off an arena wall for
+  bonus points (REBOUND!)
+- **trampolines** - two green bands in the middle of the arena launch the
+  core with a speed kick. the core goes zoom
+- **living walls** - the walls bulge out where bullets smack them, then
+  spring back
+- **WALLS ARE LIVE** - every bounce charges the walls up. when the meter
+  fills they flash gold and the next banked shot pays one multiplier step
+  higher. yes that means a x10 shot is possible. go get it
 
-| Target size | Points |
-| ----------- | ------ |
-| Large       | 1      |
-| Medium      | 3      |
-| Small       | 5      |
-| Tiny        | 10     |
+missed shots keep ricocheting around the arena, so a shot that looks lost
+may still come back and save the day.
 
-Shots can earn bonus points too. Every wall bounce a bullet banks off raises
-its multiplier: one bounce pays double (BANK SHOT!), three bounces pay x5
-(TRIPLE BANK!). The jackpot is the title shot - a bullet that ricochets all
-the way off your own back wall and heads back out pays x6 (BOUNCE BACK!).
-Each wall bounce also refunds a little bullet lifetime, so banked shots can
-fly much farther than straight ones, and they visibly heat up with a trail
-as their multiplier grows. A hit landed just after the core bounces off an
-arena wall earns an extra REBOUND! bonus worth its base points. While a
-banked shot is in flight, its current multiplier is shown over the bullet.
+## modes
 
-## Winning
+- **1P - VS THE CPU**: the cpu aims where the core is going, but its aim
+  wanders and it gets worse the longer the match runs
+- **2P - VS YOUR MATE**: two people, one keyboard, no friendships harmed
+  (allegedly)
 
-When the timer reaches zero, the player with the highest score wins. A `>` or
-`<` marker in the HUD shows who is currently ahead.
+tied score at 0:00 = SUDDEN DEATH, first hit wins. no draws, ever.
 
-If the score is tied at the end of the match, the game goes into **SUDDEN
-DEATH**. The timer stops, the arena keeps moving, and the next point wins.
-That way, every match has a winner.
+## controls
 
-## Game modes
+| | P1 (blue) | P2 (orange) |
+|---|---|---|
+| move | W / S | up / down |
+| shoot | SPACE | ENTER |
 
-- **1P – VS CPU** — Play as the blue gunner against an orange computer
-  opponent. The CPU predicts where the core is going, but its aim gets less
-  reliable as the match gets more intense.
-- **2P – VERSUS** — Two players compete on the same keyboard.
+hold shoot to auto fire. ESC or P pauses (the game also pauses itself if
+the window loses focus). pause menu: ESC resume, R restart, M menu.
+results: ENTER = rematch, ESC or M = menu.
 
-Choose a mode from the main menu by clicking a button or pressing `1` or `2`.
+## sound
 
-## Controls
+the music is actual songs now (in `assets/`): `menu.mp3` on the menu,
+`seels.mp3` during the match (it keeps playing while paused, and speeds up
+for the last 10 seconds) and `victory.mp3` on the results screen. if a song
+file is missing, that screen falls back to a chiptune loop the game writes
+itself. menu song is "Retro Platforming" by David Fesliyan - legend.
 
-| Action | Player 1 (blue, left) | Player 2 (orange, right) |
-| ------ | --------------------- | ------------------------ |
-| Move   | W / S                 | UP / DOWN                |
-| Shoot  | SPACE (hold to fire)  | ENTER (hold to fire)     |
+the sfx are all generated in code: square waves, noise bursts and boings.
 
-- `ESC` / `P` — Pause the match. The game also pauses when the window loses
-  focus.
-- Pause menu — Choose **RESUME**, **RESTART**, or **MAIN MENU** with
-  `ESC` / `R` / `M`, or click an option.
-- Results screen — Choose **PLAY AGAIN** or **MAIN MENU** with `ENTER` /
-  `ESC`, or click an option.
+## tech stuff
 
-## Screens and sound
+- everything draws to a 320x180 surface scaled up x4, so it looks chunky
+  on purpose
+- the pixel art, the font (a hand made 3x5 one) and the sfx are all
+  generated in code. no image files
+- the only dependency is pygame-ce
 
-The game flows from the main menu to a 60-second match and then to a results
-screen. You will see the mode select, instructions, live scoreboard, timer,
-target difficulty, winner announcement, final scores, confetti, and proper
-draw handling. There is also a pause overlay, all inside one shared arena.
+## run it
 
-The soundtrack is procedural chiptune, generated in code at startup (no audio
-files): a bouncy menu loop, a driving gameplay loop that switches to a
-double-time "hurry" variant in the final 10 seconds, a low-pass muffled mix
-while paused, and a calm victory loop on the results screen. Sound effects are
-synthesized square/noise blips, plus cartoon-spring "boing" waves that fire
-every time a bullet ricochets or the target gets knocked back.
-
-The arena itself is rubber: stitched bumper walls with gold spring pads in the
-corners, and every impact — bullet ricochet or target hit — sends an expanding
-ripple ring through the wall.
-
-## Tech notes
-
-- The whole game renders to a 320×180 virtual screen scaled ×4 with
-  nearest-neighbour blitting — sprites, text and effects are genuinely
-  pixelated, not just smooth graphics with pixel-style text.
-- All pixel art is procedural (character maps and drawing routines baked once
-  at startup), text uses a hand-built 3×5 bitmap font, and music and sound
-  effects are synthesized in code — no asset files, no extra dependencies.
-- Frame-rate independent movement (delta time with a safety clamp) and swept
-  circle-vs-segment collisions so fast bullets never tunnel through the target.
-
-## Run it
-
-```bash
+```
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python main.py
 ```
 
-## Tuning
+## tuning
 
-The main gameplay settings are collected at the top of `settings.py`. This is
-where you can change the match length, core size and speed curve, bullet speed,
-ricochet rules, cooldowns, scoring tiers, CPU skill (`CPU_*`), and the
-encouragement messages.
-
-Music tempo, patterns, and volume settings live in `music.py`.
+timings, sizes, cpu skill and all the scoring stuff live at the top of
+settings.py. DONT TOUCH THE NUMBERS. (we will definitely touch the numbers)

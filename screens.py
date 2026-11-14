@@ -41,31 +41,32 @@ def draw_menu(surf, assets, t, demo_target, buttons, mouse):
     for pid, x in (("p1", 26), ("p2", 294)):
         player = assets["players"][pid]
         frames = player["frames"] if int(t * 3.0) % 2 == 0 else player["frames_off"]
-        surf.blit(frames[0], (x - 5, 164))
+        y = 164 if pid == "p1" else 165      # hand-placed, slightly off
+        surf.blit(frames[0], (x - 5, y))
 
     ty = 30 - (1 if int(t * 2.0) % 2 else 0)      # chunky 1px title bounce
     x0 = VW // 2 - text_width("BOUNCE BACK", 4) // 2
     w1 = text_width("BOUNCE ", 4)
     draw_text(surf, "BOUNCE BACK", (x0 + 2, ty + 2), (6, 7, 16), 4)
     draw_text(surf, "BOUNCE", (x0, ty), P1_COLORS["light"], 4)
-    draw_text(surf, "BACK", (x0 + w1, ty), P2_COLORS["light"], 4)
-    draw_text(surf, "PIXEL ARCADE - SOLO OR TWO PLAYER SHOWDOWN", (VW // 2, 51), GRAY, 1, "center")
+    draw_text(surf, "BACK", (x0 + w1, ty + 1), P2_COLORS["light"], 4)
+    draw_text(surf, "SOLO VS CPU OR 2 PLAYER ON ONE KEYBOARD", (VW // 2, 51), GRAY, 1, "center")
 
     panel = pygame.Rect(30, 58, 260, 52)
     pygame.draw.rect(surf, UI_DARK, panel)
     pygame.draw.rect(surf, UI_LINE, panel, 1)
     draw_text(surf, "PLAYER 1", (44, 63), P1_COLORS["light"], 1)
     draw_text(surf, "W/S - MOVE", (44, 73), WHITE, 1)
-    draw_text(surf, "SPACE - SHOOT", (44, 83), WHITE, 1)
+    draw_text(surf, "SPACE - SHOOT (HOLD IT)", (44, 83), WHITE, 1)
     draw_text(surf, "PLAYER 2", (170, 63), P2_COLORS["light"], 1)
     draw_text(surf, "UP/DOWN - MOVE", (170, 73), WHITE, 1)
-    draw_text(surf, "ENTER - SHOOT", (170, 83), WHITE, 1)
-    draw_text(surf, "SMALLER TARGET = MORE POINTS", (VW // 2, 97), GOLD, 1, "center")
+    draw_text(surf, "ENTER - SHOOT (HOLD IT)", (170, 83), WHITE, 1)
+    draw_text(surf, "SMALL CORE = BIG POINTS", (VW // 2, 97), GOLD, 1, "center")
 
     for button in buttons:
         button.draw(surf, mouse)
-    draw_text(surf, "CLICK OR PRESS 1 / 2", (VW // 2, 158), GRAY, 1, "center")
-    draw_text(surf, "ESC QUITS", (VW // 2, 168), GRAY, 1, "center")
+    draw_text(surf, "CLICK OR PRESS 1 / 2 (OR THE BUTTONS)", (VW // 2, 158), GRAY, 1, "center")
+    draw_text(surf, "ESC = QUIT - MADE BY DHANESH + WILLGOB", (VW // 2, 168), GRAY, 1, "center")
 
 
 # pause
@@ -81,7 +82,7 @@ def draw_pause(surf, match, t, buttons, mouse):
     draw_text(surf, "PAUSED", (VW // 2, 54), WHITE, 3, "center")
     for button in buttons:
         button.draw(surf, mouse)
-    draw_text(surf, "ESC RESUME - R RESTART - M MENU", (VW // 2, 144), GRAY, 1, "center")
+    draw_text(surf, "BREATHE. ESC RESUME - R RESTART - M MENU", (VW // 2, 144), GRAY, 1, "center")
 
 
 # results
@@ -97,9 +98,9 @@ def draw_results(surf, match, t, buttons, mouse, confetti, message):
         if match.winner == 1:
             title, color = "YOU WIN!", P1_COLORS["light"]
         elif match.winner == 2:
-            title, color = "CPU WINS!", P2_COLORS["light"]
+            title, color = "CPU WINS (SORRY)", P2_COLORS["light"]
         else:
-            title, color = "DRAW MATCH!", GOLD
+            title, color = "ITS A DRAW??", GOLD
         left_label, right_label = "YOU", "CPU"
     else:
         if match.winner == 1:
@@ -107,7 +108,7 @@ def draw_results(surf, match, t, buttons, mouse, confetti, message):
         elif match.winner == 2:
             title, color = "PLAYER 2 WINS!", P2_COLORS["light"]
         else:
-            title, color = "DRAW MATCH!", GOLD
+            title, color = "ITS A DRAW??", GOLD
         left_label, right_label = "P1", "P2"
     draw_text(surf, title, (VW // 2 + 2, 42), (6, 7, 16), 3, "center")
     draw_text(surf, title, (VW // 2, 40), color, 3, "center")
@@ -119,4 +120,4 @@ def draw_results(surf, match, t, buttons, mouse, confetti, message):
     draw_text(surf, message, (VW // 2, 92), GOLD, 1, "center")
     for button in buttons:
         button.draw(surf, mouse)
-    draw_text(surf, "ENTER PLAY AGAIN - M MENU", (VW // 2, 154), GRAY, 1, "center")
+    draw_text(surf, "ENTER = REMATCH - M = MENU", (VW // 2, 154), GRAY, 1, "center")

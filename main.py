@@ -1,4 +1,7 @@
-"""BOUNCE BACK, a 2 player arcade shooter. Run with: python main.py"""
+"""BOUNCE BACK!!! a 2 player arcade shooter me and my mate made.
+
+run it with: python main.py  (needs pygame-ce, see requirements.txt)
+"""
 
 import random
 
@@ -22,7 +25,7 @@ class Game:
     def __init__(self):
         pygame.init()
         self.window = pygame.display.set_mode((WIN_W, WIN_H))
-        pygame.display.set_caption("BOUNCE BACK - Pixel Arcade")
+        pygame.display.set_caption("BOUNCE BACK v0.9 (beta)")
         self.virtual = pygame.Surface((VW, VH))
         self.assets = build_assets()
         self.sfx = Sfx()
@@ -44,8 +47,8 @@ class Game:
     # setup
     def _build_buttons(self):
         menu = [
-            Button(160, 122, 128, 18, "1P - VS CPU", GREEN, 2, "solo"),
-            Button(160, 144, 128, 18, "2P - VERSUS", GOLD, 2, "versus"),
+            Button(160, 122, 150, 18, "1P - VS THE CPU", GREEN, 2, "solo"),
+            Button(160, 144, 150, 18, "2P - VS YOUR MATE", GOLD, 2, "versus"),
         ]
         pause = [
             Button(160, 82, 116, 16, "RESUME", GREEN, 2, "resume"),

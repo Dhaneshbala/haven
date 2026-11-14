@@ -220,7 +220,7 @@ class Bullet:
 
 
 class Target:
-    """The bouncing core both players shoot at."""
+    """The core! both players shoot at it. it does not like that."""
 
     def __init__(self, zone, size_fn, speed_fn, sfx=None, target_frames=None,
                  on_bounce=None):
