@@ -1,16 +1,3 @@
-"""Procedural chiptune soundtrack - loops rendered to raw PCM at startup.
-
-No audio files, no extra dependencies: every track is a small step-sequenced
-composition (square lead, triangle bass, sine pads, noise drums) baked into a
-looping buffer, matching the retro arcade look of the game.
-
-Tracks:
-    menu    - bouncy, melodic, mellow mix so UI blips cut through
-    game    - driving bass + noise drums
-    hurry   - same tune, double-time hats and extra snare for the final 10s
-    pause   - low-pass "muffled" copy of the game loop (frozen-arena feel)
-    results - calm victory loop that the win jingle leads into
-"""
 
 import array
 import math
@@ -25,7 +12,7 @@ STEPS_PER_BAR = 16
 TAU = math.pi * 2.0
 
 
-# --------------------------------------------------------------- wave shapes
+
 def _square(ph):
     return 1.0 if (ph % 1.0) < 0.5 else -1.0
 
