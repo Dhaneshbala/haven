@@ -2,7 +2,7 @@
 
 ## BOUNCE BACK
 
-**BOUNCE BACK** i   s a two-player retro arcade shooter made with pygame-ce.
+**BOUNCE BACK** is a two-player retro arcade shooter made with pygame-ce.
 You share an arena, chase one bouncing energy core, and have 60 seconds to
 score as many points as possible.
 
