@@ -207,31 +207,52 @@ def _anchor_and_muzzle(surf):
     return (ax, ay), (edge, int(round(sum(tips) / len(tips))))
 
 
+_FIGHTER_ART = (("girl", "girl_archer.png"),
+                ("boy", "boy_archer.png"))
+
+
+def _fighter_pose(fitted, anchor, muzzle):
+    """Stand and stride frames plus the measured anchor and muzzle."""
+    stand = fitted
+    step = _stride(fitted)
+    return {"frames": [stand, step],
+            "frames_off": [_blink(stand), _blink(step)],
+            "anchor": anchor, "muzzle": muzzle}
+
+
+def _build_fighter(filename):
+    """One fighter in both facings; the supplied art faces player 1."""
+    fitted = _fit_archer(_load_reference_sprite(filename))
+    # measured on the original art, before any flip
+    anchor, muzzle = _anchor_and_muzzle(fitted)
+    flipped = pygame.transform.flip(fitted, True, False)
+    mirror = flipped.get_width() - 1
+    left = _fighter_pose(flipped, (mirror - anchor[0], anchor[1]),
+                         (mirror - muzzle[0], muzzle[1]))
+    return {"right": _fighter_pose(fitted, anchor, muzzle), "left": left}
+
+
 def _build_players():
+    """Slot identity (team colors, flashes) plus every selectable fighter.
+
+    Each slot also keeps its default fighter's frames, so the menu and any
+    fighter-less player draw exactly as they always have.
+    """
+    fighters = {name: _build_fighter(filename)
+                for name, filename in _FIGHTER_ART}
+    defaults = {"p1": ("girl", "right"), "p2": ("boy", "left")}
     players = {}
-    sources = (("p1", "girl_archer.png", P1_COLORS, False),
-               ("p2", "boy_archer.png", P2_COLORS, True))
-    for pid, filename, scheme, face_left in sources:
-        fitted = _fit_archer(_load_reference_sprite(filename))
-        # measured on the original art, which faces player 1's way
-        anchor, muzzle = _anchor_and_muzzle(fitted)
-        if face_left:                    # player 2 shoots toward the arena
-            fitted = pygame.transform.flip(fitted, True, False)
-            mirror = fitted.get_width() - 1
-            anchor = (mirror - anchor[0], anchor[1])
-            muzzle = (mirror - muzzle[0], muzzle[1])
-        stand = fitted
-        step = _stride(fitted)
-        frames = [stand, step]
-        frames_off = [_blink(stand), _blink(step)]
-        flash_small = _sheet(_FLASH_SMALL, {"X": (255, 255, 228)})
-        flash_big = _sheet(_FLASH_BIG, {"W": (255, 255, 235), "l": scheme["light"]})
-        players[pid] = {
-            "frames": frames, "frames_off": frames_off, "colors": scheme,
-            "flash_small": flash_small, "flash_big": flash_big,
-            "anchor": anchor, "muzzle": muzzle,
+    for pid, scheme in (("p1", P1_COLORS), ("p2", P2_COLORS)):
+        slot = {
+            "colors": scheme,
+            "flash_small": _sheet(_FLASH_SMALL, {"X": (255, 255, 228)}),
+            "flash_big": _sheet(_FLASH_BIG, {"W": (255, 255, 235),
+                                             "l": scheme["light"]}),
         }
-    return players
+        name, face = defaults[pid]
+        slot.update(fighters[name][face])     # default frames/anchor/muzzle
+        players[pid] = slot
+    return players, fighters
 
 
 def _build_bullets():
@@ -328,8 +349,10 @@ def _build_scanlines():
 
 def build_assets():
     background, stars = _build_background()
+    players, fighters = _build_players()
     return {
-        "players": _build_players(),
+        "players": players,
+        "fighters": fighters,
         "bullets": _build_bullets(),
         "targets": _build_targets(),
         "background": background,

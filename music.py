@@ -273,6 +273,7 @@ class Music:
 
     def __init__(self):
         self.enabled = False
+        self.muted = False
         self.current = None
         self.tracks = {}
         if pygame.mixer.get_init() is None:
@@ -326,6 +327,23 @@ class Music:
             except Exception:
                 pass                              # keep the chiptune for this track
 
+    def set_muted(self, muted):
+        """Hush the soundtrack but remember which loop was playing."""
+        if not self.enabled:
+            return
+        self.muted = muted
+        if muted:
+            self.channel.fadeout(120)
+        else:
+            self._restart_current()
+
+    def _restart_current(self):
+        sound = self.tracks.get(self.current) if self.current else None
+        if sound is None:
+            return
+        self.channel.set_volume(TRACK_VOLUMES.get(self.current, 0.35))
+        self.channel.play(sound, loops=TRACK_LOOPS.get(self.current, -1))
+
     def play(self, name, fade_ms=90):
         """Switch loops smoothly; no-ops when the requested track is already on."""
         if not self.enabled or name == self.current:
@@ -334,9 +352,11 @@ class Music:
         if sound is None:
             return
         self.channel.fadeout(130)
+        self.current = name
+        if self.muted:                       # track is noted, but stays quiet
+            return
         self.channel.set_volume(TRACK_VOLUMES.get(name, 0.35))
         self.channel.play(sound, loops=TRACK_LOOPS.get(name, -1), fade_ms=fade_ms)
-        self.current = name
 
     def stop(self, fade_ms=250):
         if self.enabled:

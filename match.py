@@ -6,7 +6,8 @@ import random
 import pygame
 
 from settings import (
-    HUD_H, MATCH_TIME, HURRY_AT, ARENA_L, ARENA_R, BANK_LADDER, BULGE_TIME,
+    HUD_H, MATCH_TIME, HURRY_AT, ARENA_L, ARENA_R, BANK_LADDER, BOSSES,
+    BULGE_TIME,
     HITSTOP_MIN_MULT, HITSTOP_SCALE, HITSTOP_TIME,
     MSGS, MSG_TIMES, PLAY_TOP, PLAY_BOTTOM,
     P1_X, P2_X, P1_COLORS, P2_COLORS, TARGET_ZONE, VW, VH,
@@ -30,15 +31,23 @@ def _lerp_color(a, b, t):
 
 
 class Match:
-    def __init__(self, assets, sfx, mode="versus"):
+    def __init__(self, assets, sfx, mode="versus", boss=0,
+                 fighters=("girl", "boy")):
         self.assets = assets
         self.sfx = sfx
         self.mode = mode  # "solo" or "versus"
+        self.fighters = tuple(fighters)  # (p1, p2) art picks
+        self.boss_index = boss if mode == "solo" else 0
+        self.boss_name = (BOSSES[self.boss_index]["name"]
+                          if mode == "solo" else "")
         self.zone = pygame.Rect(TARGET_ZONE)
         mid_y = (PLAY_TOP + PLAY_BOTTOM) / 2
-        self.p1 = Player("p1", P1_X, mid_y, assets, sfx)
+        self.p1 = Player("p1", P1_X, mid_y, assets, sfx,
+                         fighter=self.fighters[0])
         self.p2 = Player("p2", P2_X, mid_y, assets, sfx,
-                         is_cpu=(mode == "solo"))
+                         is_cpu=(mode == "solo"),
+                         cpu=BOSSES[self.boss_index] if mode == "solo"
+                         else None, fighter=self.fighters[1])
         self.target = Target(self.zone, target_size, target_speed, sfx,
                              assets["targets"], self._core_bounce)
         self.bullets = []
@@ -67,6 +76,18 @@ class Match:
         self.sudden_death = False  # tie at 0:00 -> first score wins
         self.sd_won = False
         self.winner = 0  # 1 = player 1, 2 = player 2, 0 = draw
+        if mode == "solo":
+            self._announce_boss()
+
+    def _announce_boss(self):
+        """Open each fight of the ladder with who you are up against."""
+        if self.boss_index == 0:
+            self.show_banner(f"BOSS 1/{len(BOSSES)} - {self.boss_name}",
+                             P2_COLORS["light"], 2.6)
+        else:
+            previous = BOSSES[self.boss_index - 1]["name"]
+            self.show_banner(f"{previous} DEFEATED! - {self.boss_name}",
+                             GOLD, 2.6)
 
     # helpers
     def spawn_bullet(self, player):
@@ -363,6 +384,10 @@ class Match:
         draw_text(surf, f"{self.p1.score:02d}", (6, 11), P1_COLORS["light"], 2)
         p2_label = "CPU" if self.mode == "solo" else "P2"
         draw_text(surf, p2_label, (VW - 6, 4), P2_COLORS["shade"], 1, "right")
+        if self.mode == "solo":            # which boss this fight is
+            draw_text(surf, f"BOSS {self.boss_index + 1}/{len(BOSSES)} "
+                            f"{self.boss_name}", (46, 4),
+                      P2_COLORS["light"], 1)
         draw_text(surf, f"{self.p2.score:02d}", (VW - 6, 11), P2_COLORS["light"], 2, "right")
         self.p1.draw_ammo(surf, 16, 4)
         self.p2.draw_ammo(surf, VW - 19, 4, right=True)

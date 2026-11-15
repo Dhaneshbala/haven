@@ -79,6 +79,7 @@ class Sfx:
 
     def __init__(self):
         self.enabled = False
+        self.muted = False
         self.sounds = {}
         try:
             pygame.mixer.init(frequency=RATE, size=-16, channels=1, buffer=512)
@@ -111,8 +112,23 @@ class Sfx:
                 self.enabled = False
                 return
 
+    def set_muted(self, muted):
+        """Silence new blips and cut off anything still ringing out.
+
+        Channel 0 belongs to the music, so only the effect channels are
+        stopped - muting the sfx must not kill the soundtrack.
+        """
+        self.muted = muted
+        if not muted or not self.enabled:
+            return
+        try:
+            for index in range(1, pygame.mixer.get_num_channels()):
+                pygame.mixer.Channel(index).stop()
+        except Exception:
+            pass
+
     def play(self, name):
-        if self.enabled and name in self.sounds:
+        if self.enabled and not self.muted and name in self.sounds:
             sound = self.sounds[name]
             try:
                 if isinstance(sound, list):      # pitch variants, e.g. boings

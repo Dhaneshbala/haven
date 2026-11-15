@@ -74,7 +74,13 @@ That way, every match has a winner.
   reliable as the match gets more intense.
 - **2P – VERSUS** — Two players compete on the same keyboard.
 
-Choose a mode from the main menu by clicking a button or pressing `1` or `2`.
+Choose a mode from the main menu by clicking a button or pressing `1` or `2`,
+then pick your fighter on the select screen: **GIRL** or **BOY**. In 1P mode
+the CPU always takes the other fighter; in 2P each player picks their own
+(mirror matches are allowed - team colors tell the two archers apart).
+Click **FIGHT!** or press `ENTER` to start, **BACK** or `ESC` to return to
+the menu. On that screen `1` / `2` picks for player 1, and `LEFT` / `RIGHT`
+picks for player 2.
 
 ## Controls
 
@@ -88,6 +94,9 @@ Choose a mode from the main menu by clicking a button or pressing `1` or `2`.
 
 - `ESC` / `P` — Pause the match. The game also pauses when the window loses
   focus.
+- `N` — Mute or unmute everything (music and sound effects) from any
+  screen. The speaker icon in the scoreboard does the same thing when
+  clicked: waves mean sound is on, a red cross means it is off.
 - Pause menu — Choose **RESUME**, **RESTART**, or **MAIN MENU** with
   `ESC` / `R` / `M`, or click an option.
 - Results screen — Choose **PLAY AGAIN** or **MAIN MENU** with `ENTER` /
@@ -95,8 +104,8 @@ Choose a mode from the main menu by clicking a button or pressing `1` or `2`.
 
 ## Screens and sound
 
-The game flows from the main menu to a 60-second match and then to a results
-screen. You will see the mode select, instructions, live scoreboard, timer,
+The game flows from the main menu through fighter select to a 60-second
+match and then to a results screen. You will see the mode select, instructions, live scoreboard, timer,
 target difficulty, winner announcement, final scores, confetti, and proper
 draw handling. There is also a pause overlay, all inside one shared arena.
 
@@ -107,6 +116,12 @@ file is missing, that screen falls back to a procedural chiptune loop
 generated in code, so there is always music. Sound effects are
 synthesized square/noise blips, plus cartoon-spring "boing" waves that
 fire every time a bullet ricochets or the target gets knocked back.
+
+A speaker icon sits in the scoreboard during a match and in the same
+spot on every other screen, so the audio can be cut at a moment's
+notice — `N` does the same job from the keyboard. Muting stops the
+music where it stands and remembers the track, so unmuting picks the
+right loop back up instead of restarting the menu tune mid-match.
 
 The arena itself is rubber: stitched bumper walls with gold spring pads in the
 corners, and every impact — bullet ricochet or target hit — sends an expanding

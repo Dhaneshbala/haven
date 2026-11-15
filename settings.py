@@ -99,6 +99,25 @@ CPU_FIRE_WINDOW = 2.4        # fires when its guess is this close
 CPU_LAPSE = 0.3              # chance of a bad wander
 CPU_COOLDOWN = 0.55          # shoots slower than a human
 
+# The solo ladder: three bosses fought back to back, each one sharper than
+# the last. Boss 1 is the original CPU, so the first fight plays exactly as
+# it always did. aim = wobble in px, lead = straight-line lead (only the
+# straight-line boss uses it), lapse = chance of a bad wander, cooldown =
+# gap between shots (the quiver reload applies to bosses too), speed =
+# movement multiplier, smart = reads the target's wall bounces instead of
+# guessing a straight path.
+BOSSES = (
+    {"name": "SCOUT", "lead": CPU_LEAD, "aim": CPU_AIM_ERROR,
+     "lapse": CPU_LAPSE, "cooldown": CPU_COOLDOWN, "speed": 1.0,
+     "smart": False},
+    {"name": "HAWK", "lead": CPU_LEAD, "aim": 3.5,
+     "lapse": 0.15, "cooldown": 0.4, "speed": 1.2,
+     "smart": True},
+    {"name": "DEADEYE", "lead": CPU_LEAD, "aim": 2.0,
+     "lapse": 0.08, "cooldown": 0.3, "speed": 1.3,
+     "smart": True},
+)
+
 # mid-match banners
 MSG_TIMES = (15.0, 30.0, 45.0)
 MSGS = ("KEEP FIRING!", "STAY SHARP!", "BOUNCE BACK!")

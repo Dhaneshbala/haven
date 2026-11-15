@@ -6,9 +6,9 @@ import random
 import pygame
 
 from settings import (
-    ARENA_L, ARENA_R, BANK_LADDER, BOUNCE_LIFE_BONUS, BULLET_LIFETIME,
-    BULLET_MAX_BOUNCES, BULLET_SPEED, CONTROLS,
-    CPU_AIM_ERROR, CPU_COOLDOWN, CPU_FIRE_WINDOW, CPU_LAPSE, CPU_LEAD,
+    ARENA_L, ARENA_R, BANK_LADDER, BOSSES, BOUNCE_LIFE_BONUS,
+    BULLET_LIFETIME, BULLET_MAX_BOUNCES, BULLET_SPEED, CONTROLS,
+    CPU_FIRE_WINDOW,
     GOLD, MAG_SIZE, PLAY_BOTTOM, PLAY_TOP, PLAYER_SPEED, RED,
     RELOAD_TIME,
     POP_LIFE, REBOUND_WINDOW, RETURN_MULT, RIPPLE_TTL, SHOT_COOLDOWN,
@@ -37,15 +37,64 @@ def point_seg_dist(px, py, ax, ay, bx, by):
     return math.hypot(px - (ax + dx * t), py - (ay + dy * t))
 
 
+def _intercept_y(player, target, zone, step=1 / 120.0):
+    """Height a smart boss must aim at to meet a bouncing target.
+
+    A straight lead guesses a straight path, but the target spends its
+    flight ricocheting off the zone walls and the two trampoline bands, so
+    the guess is usually wrong. This replays those reflections until the
+    arrow reaches the target's column. The course changes the target makes
+    on its own are random, so they stay unpredictable.
+    """
+    x, y = target.x, target.y
+    vx, vy = target.vx, target.vy
+    radius = target.radius()
+    speed, boost = target.base_speed, target.boost
+    origin, toward = player.x, player.face
+    t = 0.0
+    while t < 2.4:                        # an arrow never flies longer
+        t += step
+        boost = max(0.0, boost - step)    # trampoline boost fades out
+        mag = math.hypot(vx, vy)
+        if mag > 1e-6:
+            want = speed * (1.0 + 0.6 * boost) / mag
+            vx, vy = vx * want, vy * want
+        x += vx * step
+        y += vy * step
+        if x - radius < zone.left:
+            x, vx = zone.left + radius, abs(vx)
+        elif x + radius > zone.right:
+            x, vx = zone.right - radius, -abs(vx)
+        if y - radius < zone.top:
+            y, vy = zone.top + radius, abs(vy)
+        elif y + radius > zone.bottom:
+            y, vy = zone.bottom - radius, -abs(vy)
+        for band_y in TRAMPOLINE_YS:      # the core bounces off these
+            if vy > 0.0 and y < band_y <= y + radius:
+                y, vy = band_y - radius, -abs(vy)
+            elif vy < 0.0 and y > band_y >= y - radius:
+                y, vy = band_y + radius, abs(vy)
+        if toward * (origin + toward * BULLET_SPEED * t - x) >= 0.0:
+            return y                      # the arrow has reached its column
+    return y
+
+
 class Player:
     """An archer on one side of the arena. Moves vertically, fires horizontally."""
 
-    def __init__(self, pid, x, y, assets, sfx=None, is_cpu=False):
+    def __init__(self, pid, x, y, assets, sfx=None, is_cpu=False, cpu=None,
+                 fighter=None):
         self.pid = pid
         self.face = 1 if pid == "p1" else -1
-        self.assets = assets["players"][pid]
+        self.assets = dict(assets["players"][pid])
+        if fighter:
+            # swap in the chosen fighter's art; team colors stay with the slot
+            face_key = "right" if self.face > 0 else "left"
+            self.assets.update(assets["fighters"][fighter][face_key])
         self.colors = self.assets["colors"]
         self.sfx = sfx
+        # the opponent's tuning; bosses get a sharper entry from BOSSES
+        self.cpu = cpu or BOSSES[0]
         self.ax, self.ay = self.assets["anchor"]
         self.sprite_h = self.assets["frames"][0].get_height()
         self.x = float(x)
@@ -77,7 +126,7 @@ class Player:
             return                      # dry: waiting on the quiver
         if self.cooldown > 0.0 or len(match.bullets) >= BULLET_CAP:
             return
-        self.cooldown = CPU_COOLDOWN if self.is_cpu else SHOT_COOLDOWN
+        self.cooldown = self.cpu["cooldown"] if self.is_cpu else SHOT_COOLDOWN
         self.recoil = 0.1
         match.spawn_bullet(self)
         self.ammo -= 1
@@ -115,14 +164,21 @@ class Player:
             self.fire(match)
 
     def update_cpu(self, dt, match):
-        """1P opponent: aims where the target will be, badly."""
+        """Boss opponent: aims where the target will be, badly at first."""
+        cpu = self.cpu
         target = match.target
-        dx = max(30.0, abs(target.x - self.x))
-        travel = dx / BULLET_SPEED
-        predict_y = target.y + target.vy * travel * CPU_LEAD + self.aim_error
+        if cpu["smart"]:
+            # reads the wall and trampoline bounces instead of guessing
+            predict_y = _intercept_y(self, target, match.zone) + self.aim_error
+        else:
+            dx = max(30.0, abs(target.x - self.x))
+            travel = dx / BULLET_SPEED
+            predict_y = (target.y + target.vy * travel * cpu["lead"]
+                         + self.aim_error)
         diff = predict_y - self.y
         if abs(diff) > 1.5:
-            self.y += clamp(diff, -1.0, 1.0) * PLAYER_SPEED * dt
+            self.y += (clamp(diff, -1.0, 1.0) * PLAYER_SPEED * cpu["speed"]
+                       * dt)
             self.moving = True
         else:
             self.moving = False
@@ -132,10 +188,10 @@ class Player:
             self.aim_t = random.uniform(0.35, 0.9)
             # aim gets sloppier as the match goes on
             pressure = 1.0 + match.elapsed / 40.0
-            if random.random() < CPU_LAPSE:
-                span = CPU_AIM_ERROR * 3 * pressure
+            if random.random() < cpu["lapse"]:
+                span = cpu["aim"] * 3 * pressure
             else:
-                span = CPU_AIM_ERROR * pressure
+                span = cpu["aim"] * pressure
             self.aim_error = random.uniform(-span, span)
         self.cooldown = max(0.0, self.cooldown - dt)
         self.recoil = max(0.0, self.recoil - dt)
