@@ -21,12 +21,19 @@ class Button:
         self.scale = scale
         self.action = action
 
+    def contains(self, point):
+        """Use the same forgiving hit area for hover and click."""
+        return self.rect.inflate(6, 4).collidepoint(point)
+
     def draw(self, surf, mouse):
-        hovered = self.rect.collidepoint(mouse)
+        # A little extra hit area keeps the controls pleasant at high-DPI
+        # display scales, while the visible border remains pixel precise.
+        hovered = self.contains(mouse)
         pygame.draw.rect(surf, (8, 10, 22), self.rect.move(2, 2))
-        pygame.draw.rect(surf, (38, 46, 88) if hovered else (24, 28, 56), self.rect)
-        pygame.draw.rect(surf, self.accent if hovered else UI_LINE, self.rect, 2)
-        color = self.accent if hovered else WHITE
+        pygame.draw.rect(surf, (46, 54, 100) if hovered else UI_MID, self.rect)
+        pygame.draw.rect(surf, self.accent, self.rect, 1)
+        pygame.draw.rect(surf, UI_DARK, self.rect.inflate(-4, -4), 1)
+        color = WHITE if hovered else self.accent
         y = self.rect.centery - (5 * self.scale) // 2
         draw_text(surf, self.label, (self.rect.centerx, y), color, self.scale, "center")
 
@@ -40,8 +47,12 @@ def draw_menu(surf, assets, t, demo_target, buttons, mouse):
     demo_target.draw(surf, t, 0, 0)
     for pid, x in (("p1", 26), ("p2", 294)):
         player = assets["players"][pid]
-        frames = player["frames"] if int(t * 3.0) % 2 == 0 else player["frames_off"]
-        surf.blit(frames[0], (x - 5, 164))
+        blink_on = int(t * 3.0) % 2 == 0
+        frames = player["frames"] if blink_on else player["frames_off"]
+        frame = frames[int(t * 6.0) % 2]
+        ax, _ay = player["anchor"]
+        bob = 1 if int(t * 2.0) % 2 else 0
+        surf.blit(frame, (x - ax, VH - frame.get_height() - 1 - bob))
 
     ty = 30 - (1 if int(t * 2.0) % 2 else 0)      # chunky 1px title bounce
     x0 = VW // 2 - text_width("BOUNCE BACK", 4) // 2

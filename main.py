@@ -101,6 +101,15 @@ class Game:
         else:
             self.music.play("results")
 
+    def _virtual_point(self, point):
+        """Map pointer input to the 320x180 canvas at any window scale."""
+        width, height = self.window.get_size()
+        x, y = point
+        return (
+            max(0, min(VW - 1, int(x * VW / max(1, width)))),
+            max(0, min(VH - 1, int(y * VH / max(1, height)))),
+        )
+
     
     def handle_event(self, event):
         if event.type == pygame.QUIT:
@@ -116,9 +125,9 @@ class Game:
                     self.held.discard(action)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mx, my = event.pos[0] // SCALE, event.pos[1] // SCALE
+            mx, my = self._virtual_point(event.pos)
             for button in self.buttons.get(self.state, ()):
-                if button.rect.collidepoint((mx, my)):
+                if button.contains((mx, my)):
                     self.sfx.play("select")
                     self._button_action(button.action)
                     return
@@ -178,7 +187,7 @@ class Game:
     
     def draw(self):
         surf = self.virtual
-        mouse = (pygame.mouse.get_pos()[0] // SCALE, pygame.mouse.get_pos()[1] // SCALE)
+        mouse = self._virtual_point(pygame.mouse.get_pos())
         if self.state == "menu":
             draw_menu(surf, self.assets, self.t, self.menu_target,
                       self.buttons["menu"], mouse)

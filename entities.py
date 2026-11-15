@@ -7,9 +7,9 @@ import pygame
 
 from settings import (
     ARENA_L, ARENA_R, BANK_LADDER, BOUNCE_LIFE_BONUS, BULLET_LIFETIME,
-    BULLET_MAX_BOUNCES, BULLET_SPEED, BULLET_Y_OFFSET, CONTROLS,
+    BULLET_MAX_BOUNCES, BULLET_SPEED, CONTROLS,
     CPU_AIM_ERROR, CPU_COOLDOWN, CPU_FIRE_WINDOW, CPU_LAPSE, CPU_LEAD,
-    GUN_LEN, MUZZLE_DIST, GOLD, PLAY_BOTTOM, PLAY_TOP, PLAYER_SPEED,
+    GOLD, PLAY_BOTTOM, PLAY_TOP, PLAYER_SPEED,
     POP_LIFE, REBOUND_WINDOW, RETURN_MULT, RIPPLE_TTL, SHOT_COOLDOWN,
     TARGET_DARK, BULLET_CAP, UI_LINE, UI_MID, TARGET_BODY, TARGET_LIGHT,
     TARGET_CORE, TRAMPOLINE_COMPRESS, TRAMPOLINE_YS, tier_for_size,
@@ -36,13 +36,15 @@ def point_seg_dist(px, py, ax, ay, bx, by):
 
 
 class Player:
-    """A gunner on one side of the arena. Moves vertically, fires horizontally."""
+    """An archer on one side of the arena. Moves vertically, fires horizontally."""
 
     def __init__(self, pid, x, y, assets, is_cpu=False):
         self.pid = pid
         self.face = 1 if pid == "p1" else -1
         self.assets = assets["players"][pid]
         self.colors = self.assets["colors"]
+        self.ax, self.ay = self.assets["anchor"]
+        self.sprite_h = self.assets["frames"][0].get_height()
         self.x = float(x)
         self.y = float(y)
         self.score = 0
@@ -55,7 +57,15 @@ class Player:
         self.aim_t = 0.0
 
     def muzzle(self):
-        return (self.x + self.face * MUZZLE_DIST, self.y + BULLET_Y_OFFSET)
+        mx, my = self.assets["muzzle"]
+        return (self.x - self.ax + mx + self.face * 2,
+                self.y - self.ay + my)
+
+    def _clamp_y(self):
+        """Keep the whole sprite inside the arena, feet on the same line as before."""
+        top = PLAY_TOP + self.ay
+        bottom = PLAY_BOTTOM - (self.sprite_h - self.ay - 1)
+        self.y = clamp(self.y, top, bottom)
 
     def fire(self, match):
         if self.cooldown > 0.0 or len(match.bullets) >= BULLET_CAP:
@@ -73,7 +83,7 @@ class Player:
             vy += 1.0
         self.moving = vy != 0.0
         self.y += vy * PLAYER_SPEED * dt
-        self.y = clamp(self.y, PLAY_TOP + 7, PLAY_BOTTOM - 7)
+        self._clamp_y()
         self.cooldown = max(0.0, self.cooldown - dt)
         self.recoil = max(0.0, self.recoil - dt)
         self.anim += dt * (10.0 if self.moving else 3.0)
@@ -92,7 +102,7 @@ class Player:
             self.moving = True
         else:
             self.moving = False
-        self.y = clamp(self.y, PLAY_TOP + 7, PLAY_BOTTOM - 7)
+        self._clamp_y()
         self.aim_t -= dt
         if self.aim_t <= 0.0:
             self.aim_t = random.uniform(0.35, 0.9)
@@ -115,25 +125,16 @@ class Player:
         frame = frames[int(self.anim) % 2]
         bob = 1 if (not self.moving and int(t * 2.0) % 2) else 0
         shift = self.face if self.recoil > 0 else 0
-        px = int(round(self.x)) - 5 + dx - shift
-        py = int(round(self.y)) - 6 + dy - bob
+        px = int(round(self.x)) - self.ax + dx - shift
+        py = int(round(self.y)) - self.ay + dy - bob
         surf.blit(frame, (px, py))
-        # gun
-        gx = int(round(self.x)) - shift
-        gy = int(round(self.y)) + 1 + dy
-        x_edge = gx + self.face * 4
-        left = x_edge if self.face > 0 else x_edge - GUN_LEN
-        pygame.draw.rect(surf, self.colors["metal"], (left, gy, GUN_LEN, 2))
-        tip_x = gx + self.face * (4 + GUN_LEN - 1)
-        pygame.draw.rect(surf, self.colors["light"], (tip_x, gy, 1, 2))
-        # muzzle flash
         if self.recoil > 0.045:
             if self.recoil > 0.075:
                 flash, off = self.assets["flash_big"], 2
             else:
                 flash, off = self.assets["flash_small"], 1
             mx, my = self.muzzle()
-            surf.blit(flash, (int(mx) - off, int(my) - 1))
+            surf.blit(flash, (int(mx) - shift - off, int(my) - 1))
 
 
 class Bullet:
@@ -211,7 +212,8 @@ class Bullet:
         else:
             frames = bundle["super"]
         frame = frames[int(self.anim * 22) % 2]
-        surf.blit(frame, (int(self.x) - 2 + dx, int(self.y) - 1 + dy))
+        ax, ay = bundle["anchor"]
+        surf.blit(frame, (int(self.x) - ax + dx, int(self.y) - ay + dy))
         step = 1 if (live and self.bounces >= 1) else 0
         mult = self.multiplier(step)
         if mult > 1:                 # live bank value over the bullet
@@ -341,12 +343,6 @@ class Target:
         ox = int(round(self.x)) - (size // 2 + 2) + dx
         oy = int(round(self.y)) - (size // 2 + 2) + dy
         surf.blit(frame, (ox, oy))
-        if size >= 8 and self.flash <= 0.0:
-            # pupil looks where it's headed
-            speed = math.hypot(self.vx, self.vy) or 1.0
-            px = int(round(self.x + self.vx / speed * size * 0.18))
-            py = int(round(self.y + self.vy / speed * size * 0.18))
-            pygame.draw.rect(surf, TARGET_DARK, (px + dx, py + dy, 2, 2))
 
 
 class Particle:

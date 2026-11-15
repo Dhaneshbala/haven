@@ -62,7 +62,7 @@ That way, every match has a winner.
 
 ## Game modes
 
-- **1P – VS CPU** — Play as the blue gunner against an orange computer
+- **1P – VS CPU** — Play as the blue-clad archer against a green-clad computer
   opponent. The CPU predicts where the core is going, but its aim gets less
   reliable as the match gets more intense.
 - **2P – VERSUS** — Two players compete on the same keyboard.
@@ -71,7 +71,7 @@ Choose a mode from the main menu by clicking a button or pressing `1` or `2`.
 
 ## Controls
 
-| Action | Player 1 (blue, left) | Player 2 (orange, right) |
+| Action | Player 1 (blue, left) | Player 2 (green, right) |
 | ------ | --------------------- | ------------------------ |
 | Move   | W / S                 | UP / DOWN                |
 | Shoot  | SPACE (hold to fire)  | ENTER (hold to fire)     |
@@ -107,9 +107,9 @@ ripple ring through the wall.
 - The whole game renders to a 320×180 virtual screen scaled ×4 with
   nearest-neighbour blitting — sprites, text and effects are genuinely
   pixelated, not just smooth graphics with pixel-style text.
-- All pixel art is procedural (character maps and drawing routines baked once
-  at startup), text uses a hand-built 3×5 bitmap font, and music and sound
-  effects are synthesized in code — no asset files, no extra dependencies.
+- The supplied archer and arrow pixel sprites are loaded at startup and
+  downscaled with nearest-neighbour pixels; the remaining art and text use
+  code-drawn pixel graphics. Music and sound effects are synthesized in code.
 - Frame-rate independent movement (delta time with a safety clamp) and swept
   circle-vs-segment collisions so fast bullets never tunnel through the target.
 
