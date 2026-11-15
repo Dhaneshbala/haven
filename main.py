@@ -1,4 +1,4 @@
-"""BOUNCE BACK, a 2 player arcade shooter. Run with: python main.py"""
+
 
 import random
 
@@ -17,7 +17,7 @@ from screens import Button, draw_menu, draw_pause, draw_results
 
 
 class Game:
-    """Main loop and screen states."""
+    
 
     def __init__(self):
         pygame.init()
@@ -41,7 +41,7 @@ class Game:
                                   self.sfx, self.assets["targets"])
         self.buttons = self._build_buttons()
 
-    # setup
+    
     def _build_buttons(self):
         menu = [
             Button(160, 122, 128, 18, "1P - VS CPU", GREEN, 2, "solo"),
@@ -58,7 +58,7 @@ class Game:
         ]
         return {"menu": menu, "pause": pause, "results": results}
 
-    # transitions
+    
     def start_match(self, mode=None):
         self.mode = mode or self.mode
         self.match = Match(self.assets, self.sfx, self.mode)
@@ -91,18 +91,17 @@ class Game:
             for _ in range(46)
         ]
 
-    # music
+    
     def _sync_music(self):
         if self.state == "menu":
             self.music.play("menu")
         elif self.state in ("playing", "paused"):
-            # pause leaves the in-game track running: play() no-ops when the
-            # track is unchanged, so the loop keeps going seamlessly
+            
             self.music.play("hurry" if self.match.hurry else "game")
         else:
             self.music.play("results")
 
-    # events
+    
     def handle_event(self, event):
         if event.type == pygame.QUIT:
             self.running = False
@@ -158,7 +157,7 @@ class Game:
             elif key in (pygame.K_ESCAPE, pygame.K_m):
                 self.state = "menu"
 
-    # update
+    
     def update(self, dt):
         self.t += dt
         if self.state == "menu":
@@ -176,7 +175,7 @@ class Game:
                     bit["x"] = random.uniform(0, VW)
         self._sync_music()
 
-    # draw
+    
     def draw(self):
         surf = self.virtual
         mouse = (pygame.mouse.get_pos()[0] // SCALE, pygame.mouse.get_pos()[1] // SCALE)
@@ -193,7 +192,7 @@ class Game:
         pygame.transform.scale(surf, (WIN_W, WIN_H), self.window)
         pygame.display.flip()
 
-    # run
+    
     def run(self):
         while self.running:
             dt = min(self.clock.tick(FPS) / 1000.0, 0.05)
