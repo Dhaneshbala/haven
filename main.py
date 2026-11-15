@@ -56,7 +56,8 @@ class Game:
             Button(160, 114, 124, 16, "PLAY AGAIN", GOLD, 2, "restart"),
             Button(160, 136, 124, 16, "MAIN MENU", GRAY, 2, "menu"),
         ]
-        return {"menu": menu, "pause": pause, "results": results}
+        # keys must match the state names, or clicks fall through
+        return {"menu": menu, "paused": pause, "results": results}
 
     
     def start_match(self, mode=None):
@@ -194,7 +195,7 @@ class Game:
         elif self.state == "playing":
             self.match.draw(surf, self.t)
         elif self.state == "paused":
-            draw_pause(surf, self.match, self.t, self.buttons["pause"], mouse)
+            draw_pause(surf, self.match, self.t, self.buttons["paused"], mouse)
         elif self.state == "results":
             draw_results(surf, self.match, self.t, self.buttons["results"],
                          mouse, self.confetti, self.result_msg)

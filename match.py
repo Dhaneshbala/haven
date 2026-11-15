@@ -36,8 +36,9 @@ class Match:
         self.mode = mode  # "solo" or "versus"
         self.zone = pygame.Rect(TARGET_ZONE)
         mid_y = (PLAY_TOP + PLAY_BOTTOM) / 2
-        self.p1 = Player("p1", P1_X, mid_y, assets)
-        self.p2 = Player("p2", P2_X, mid_y, assets, is_cpu=(mode == "solo"))
+        self.p1 = Player("p1", P1_X, mid_y, assets, sfx)
+        self.p2 = Player("p2", P2_X, mid_y, assets, sfx,
+                         is_cpu=(mode == "solo"))
         self.target = Target(self.zone, target_size, target_speed, sfx,
                              assets["targets"], self._core_bounce)
         self.bullets = []
@@ -363,6 +364,8 @@ class Match:
         p2_label = "CPU" if self.mode == "solo" else "P2"
         draw_text(surf, p2_label, (VW - 6, 4), P2_COLORS["shade"], 1, "right")
         draw_text(surf, f"{self.p2.score:02d}", (VW - 6, 11), P2_COLORS["light"], 2, "right")
+        self.p1.draw_ammo(surf, 16, 4)
+        self.p2.draw_ammo(surf, VW - 19, 4, right=True)
         if self.p1.score > self.p2.score:          # who has the most points
             draw_text(surf, ">", (24, 13), P1_COLORS["light"], 1)
         elif self.p2.score > self.p1.score:

@@ -9,9 +9,11 @@ from settings import (
     ARENA_L, ARENA_R, BANK_LADDER, BOUNCE_LIFE_BONUS, BULLET_LIFETIME,
     BULLET_MAX_BOUNCES, BULLET_SPEED, CONTROLS,
     CPU_AIM_ERROR, CPU_COOLDOWN, CPU_FIRE_WINDOW, CPU_LAPSE, CPU_LEAD,
-    GOLD, PLAY_BOTTOM, PLAY_TOP, PLAYER_SPEED,
+    GOLD, MAG_SIZE, PLAY_BOTTOM, PLAY_TOP, PLAYER_SPEED, RED,
+    RELOAD_TIME,
     POP_LIFE, REBOUND_WINDOW, RETURN_MULT, RIPPLE_TTL, SHOT_COOLDOWN,
-    TARGET_DARK, BULLET_CAP, UI_LINE, UI_MID, TARGET_BODY, TARGET_LIGHT,
+    TARGET_DARK, BULLET_CAP, UI_DARK, UI_LINE, UI_MID, TARGET_BODY,
+    TARGET_LIGHT,
     TARGET_CORE, TRAMPOLINE_COMPRESS, TRAMPOLINE_YS, tier_for_size,
     P1_COLORS, P2_COLORS,
 )
@@ -38,16 +40,19 @@ def point_seg_dist(px, py, ax, ay, bx, by):
 class Player:
     """An archer on one side of the arena. Moves vertically, fires horizontally."""
 
-    def __init__(self, pid, x, y, assets, is_cpu=False):
+    def __init__(self, pid, x, y, assets, sfx=None, is_cpu=False):
         self.pid = pid
         self.face = 1 if pid == "p1" else -1
         self.assets = assets["players"][pid]
         self.colors = self.assets["colors"]
+        self.sfx = sfx
         self.ax, self.ay = self.assets["anchor"]
         self.sprite_h = self.assets["frames"][0].get_height()
         self.x = float(x)
         self.y = float(y)
         self.score = 0
+        self.ammo = MAG_SIZE
+        self.reload = 0.0          # > 0 while the empty quiver refills
         self.cooldown = 0.0
         self.recoil = 0.0
         self.anim = 0.0
@@ -68,11 +73,29 @@ class Player:
         self.y = clamp(self.y, top, bottom)
 
     def fire(self, match):
+        if self.reload > 0.0 or self.ammo <= 0:
+            return                      # dry: waiting on the quiver
         if self.cooldown > 0.0 or len(match.bullets) >= BULLET_CAP:
             return
         self.cooldown = CPU_COOLDOWN if self.is_cpu else SHOT_COOLDOWN
         self.recoil = 0.1
         match.spawn_bullet(self)
+        self.ammo -= 1
+        if self.ammo <= 0:
+            self.reload = RELOAD_TIME
+            if self.sfx:
+                self.sfx.play("select")   # last arrow out: click, then reload
+
+    def _tick_reload(self, dt):
+        """Refill the quiver once the reload countdown runs out."""
+        if self.reload <= 0.0:
+            return
+        self.reload -= dt
+        if self.reload <= 0.0:
+            self.reload = 0.0
+            self.ammo = MAG_SIZE
+            if self.sfx:
+                self.sfx.play("tick")
 
     def update(self, dt, held, match):
         up_key, down_key, shoot_key = CONTROLS[self.pid]
@@ -86,6 +109,7 @@ class Player:
         self._clamp_y()
         self.cooldown = max(0.0, self.cooldown - dt)
         self.recoil = max(0.0, self.recoil - dt)
+        self._tick_reload(dt)
         self.anim += dt * (10.0 if self.moving else 3.0)
         if held(shoot_key):
             self.fire(match)
@@ -115,6 +139,7 @@ class Player:
             self.aim_error = random.uniform(-span, span)
         self.cooldown = max(0.0, self.cooldown - dt)
         self.recoil = max(0.0, self.recoil - dt)
+        self._tick_reload(dt)
         self.anim += dt * (10.0 if self.moving else 3.0)
         if abs(predict_y - self.y) <= CPU_FIRE_WINDOW:
             self.fire(match)
@@ -128,6 +153,9 @@ class Player:
         px = int(round(self.x)) - self.ax + dx - shift
         py = int(round(self.y)) - self.ay + dy - bob
         surf.blit(frame, (px, py))
+        if self.reload > 0.0 and int(t * 6.0) % 2 == 0:
+            # blinking callout over the head while the quiver refills
+            draw_text(surf, "RELOAD", (px + self.ax, py - 8), RED, 1, "center")
         if self.recoil > 0.045:
             if self.recoil > 0.075:
                 flash, off = self.assets["flash_big"], 2
@@ -135,6 +163,28 @@ class Player:
                 flash, off = self.assets["flash_small"], 1
             mx, my = self.muzzle()
             surf.blit(flash, (int(mx) - shift - off, int(my) - 1))
+
+    def draw_ammo(self, surf, x, y, right=False):
+        """Quiver pips in the scoreboard: solid = arrows left, bar = reloading.
+
+        x is the left edge, or the right edge when right=True.
+        """
+        width = MAG_SIZE * 3 - 1
+        if right:
+            x -= width - 1
+        if self.reload > 0.0:
+            pygame.draw.rect(surf, UI_DARK, (x, y, width, 5))
+            pygame.draw.rect(surf, UI_LINE, (x, y, width, 5), 1)
+            done = int(round((width - 2)
+                             * (1.0 - self.reload / RELOAD_TIME)))
+            if done > 0:
+                pygame.draw.rect(surf, self.colors["body"],
+                                 (x + 1, y + 1, done, 3))
+            return
+        for i in range(MAG_SIZE):
+            pip = (x + i * 3, y, 2, 5)
+            color = self.colors["light"] if i < self.ammo else UI_MID
+            pygame.draw.rect(surf, color, pip)
 
 
 class Bullet:

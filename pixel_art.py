@@ -77,8 +77,8 @@ def _fit_archer(source):
                         samples.append(color)
             if not samples:
                 continue
-            bow = [color for color in samples if color.r > 200 and color.g < 100]
-            pick = bow[0] if bow else samples[0]
+            fletch = [color for color in samples if color.r > 200 and color.g < 100]
+            pick = fletch[0] if fletch else samples[0]
             out.set_at((x, y), (pick.r, pick.g, pick.b, 255))
     return out
 
@@ -143,10 +143,6 @@ def _load_target_references():
     ]
 
 
-def _is_bow(color):
-    return color.a > 20 and color.r > 200 and color.g < 100 and color.b < 140
-
-
 def _stride(surf, leg_rows=6):
     """Second walk frame: boots step apart, the same stride the gunners had."""
     width, height = surf.get_size()
@@ -185,27 +181,30 @@ def _blink(surf):
 
 
 def _anchor_and_muzzle(surf):
-    """Body center is where the player stands; the bow tip is where shots leave."""
+    """Work out where the archer stands and where her shots leave.
+
+    anchor: the body's centre, so the sprite is positioned by the middle of
+    the figure rather than its bounding box.
+    muzzle: the outermost point of the bow arm, measured on the artwork
+    before any flip (the supplied art faces right, as player 1 does).
+    """
     width, height = surf.get_size()
+    top = int(height * 0.45)
+    bottom = max(top + 1, int(height * 0.72))
     body_x = []
-    bow = []
+    bow_arm = []
     for y in range(height):
         for x in range(width):
-            color = surf.get_at((x, y))
-            if color.a < 20:
+            if surf.get_at((x, y)).a < 20:
                 continue
-            if _is_bow(color):
-                bow.append((x, y))
-            else:
-                body_x.append(x)
+            body_x.append(x)
+            if top <= y < bottom:          # waist-high band holds the bow
+                bow_arm.append((x, y))
     ax = int(round(sum(body_x) / len(body_x))) if body_x else width // 2
     ay = int(round(height * 0.42))
-    if bow:
-        mx = int(round(sum(x for x, _y in bow) / len(bow)))
-        my = int(round(sum(y for _x, y in bow) / len(bow)))
-    else:
-        mx, my = ax, ay
-    return (ax, ay), (mx, my)
+    edge = max(x for x, _y in bow_arm)
+    tips = [y for x, y in bow_arm if x >= edge - 1]
+    return (ax, ay), (edge, int(round(sum(tips) / len(tips))))
 
 
 def _build_players():
@@ -214,13 +213,17 @@ def _build_players():
                ("p2", "boy_archer.png", P2_COLORS, True))
     for pid, filename, scheme, face_left in sources:
         fitted = _fit_archer(_load_reference_sprite(filename))
+        # measured on the original art, which faces player 1's way
+        anchor, muzzle = _anchor_and_muzzle(fitted)
         if face_left:                    # player 2 shoots toward the arena
             fitted = pygame.transform.flip(fitted, True, False)
+            mirror = fitted.get_width() - 1
+            anchor = (mirror - anchor[0], anchor[1])
+            muzzle = (mirror - muzzle[0], muzzle[1])
         stand = fitted
         step = _stride(fitted)
         frames = [stand, step]
         frames_off = [_blink(stand), _blink(step)]
-        anchor, muzzle = _anchor_and_muzzle(stand)
         flash_small = _sheet(_FLASH_SMALL, {"X": (255, 255, 228)})
         flash_big = _sheet(_FLASH_BIG, {"W": (255, 255, 235), "l": scheme["light"]})
         players[pid] = {

@@ -44,6 +44,13 @@ Big hits get a moment to land: any shot worth x5 or more (a TRIPLE BANK,
 the x6 BOUNCE BACK, or a x10 walls-live jackpot) freezes the match for a
 quarter second with a white flash, then time speeds back up.
 
+Every archer starts with a full quiver of 10 arrows. Shoot them all and
+the quiver goes dry: firing stops for a 3 second reload, then refills
+automatically. The scoreboard shows what is left as pips next to each
+score (a filling bar while the reload runs), and a blinking RELOAD pops
+up over the archer's head, so you always know how close you are to
+empty. The CPU opponent lives by the same rule.
+
 The game also keeps records in a small `best.json` next to the game: the
 best single-player score per mode (in versus, the better of the two
 players counts) and the longest single-bullet bank chain ever. Cross
@@ -75,6 +82,9 @@ Choose a mode from the main menu by clicking a button or pressing `1` or `2`.
 | ------ | --------------------- | ------------------------ |
 | Move   | W / S                 | UP / DOWN                |
 | Shoot  | SPACE (hold to fire)  | ENTER (hold to fire)     |
+
+- Ammo — 10 arrows per quiver. Empty it and you get a 3 second reload
+  before the quiver refills.
 
 - `ESC` / `P` — Pause the match. The game also pauses when the window loses
   focus.
@@ -125,7 +135,8 @@ python -m venv .venv
 
 The main gameplay settings are collected at the top of `settings.py`. This is
 where you can change the match length, core size and speed curve, bullet speed,
-ricochet rules, cooldowns, scoring tiers, CPU skill (`CPU_*`), and the
+ricochet rules, cooldowns, quiver size and reload (`MAG_SIZE`,
+`RELOAD_TIME`), scoring tiers, CPU skill (`CPU_*`), and the
 encouragement messages.
 
 Music tempo, patterns, and volume settings live in `music.py`.

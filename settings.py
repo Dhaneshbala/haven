@@ -32,11 +32,10 @@ TARGET_ZONE = (96, 34, 128, 130)
 
 # players
 PLAYER_SPEED = 85.0
-GUN_LEN = 8
-MUZZLE_DIST = 13
-BULLET_Y_OFFSET = 2
 
 SHOT_COOLDOWN = 0.33
+MAG_SIZE = 10                # arrows in a quiver
+RELOAD_TIME = 3.0            # seconds an empty quiver takes to refill
 BULLET_SPEED = 150.0
 BULLET_LIFETIME = 3.2        # straight shots fizzle after this long
 BOUNCE_LIFE_BONUS = 1.5      # every wall bounce refunds this much lifetime
